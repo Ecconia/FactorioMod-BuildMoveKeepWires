@@ -34,17 +34,28 @@ script.on_event(defines.events.on_built_entity,
 			local new_entity = event.created_entity
 			local old_entity = my_object.entity
 			new_entity.copy_settings(old_entity)
+			local self_connect = {}
 			for _, connection in pairs(old_entity.circuit_connection_definitions) do
 				-- Fix, if the connection was to itself:
+				local process = true
 				if connection.target_entity == old_entity then
-					connection.target_entity = new_entity
+					if self_connect[connection.wire] then
+						process = false
+					else
+						self_connect[connection.wire] = true
+						connection.target_entity = new_entity
+					end
 				end
-				-- Fix, if wire cannot be placed for distance reasons, abort, but keep modi alive 
-				if not new_entity.connect_neighbour(connection) then
-					player.print({"wire-does-not-reach"})
-					new_entity.destroy()
-					my_object.init = false -- Rearm this placement.
-					return
+
+				-- Fix, skip if the connection (to itself) was already placed.
+				if process then
+					-- Fix, if wire cannot be placed for distance reasons, abort, but keep modi alive 
+					if not new_entity.connect_neighbour(connection) then
+						player.print({"wire-does-not-reach"})
+						new_entity.destroy()
+						my_object.init = false -- Rearm this placement.
+						return
+					end
 				end
 			end
 
